@@ -8,21 +8,14 @@ protocol CategorySelectionViewControllerDelegate: AnyObject {
 
 final class CategorySelectionViewController: UIViewController {
     
-    private enum Section: Int, CaseIterable {
-        case categories
-        case addCategory
-    }
-    
     // MARK: - Properties
     
     weak var delegate: CategorySelectionViewControllerDelegate?
     
     private var categories: [String]
-    private var selectedCategory: String? {
-        didSet { updateDoneButtonState() }
-    }
+    private var selectedCategory: String?
     
-    private let tableBackgroundColor = UIColor(named: "AppGrayOsn")
+    private let tableBackgroundColor = UIColor(resource: .appGrayOsn)
     
     private lazy var tableView: UITableView = {
         let table = UITableView(frame: .zero, style: .insetGrouped)
@@ -36,14 +29,39 @@ final class CategorySelectionViewController: UIViewController {
     
     private lazy var doneButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Готово", for: .normal)
+        button.setTitle("Добавить категорию", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = UIColor(named: "AppBlack")
+        button.backgroundColor = UIColor(resource: .appBlack)
         button.layer.cornerRadius = 16
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
         return button
+    }()
+    
+    private let emptyStateView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
+        return view
+    }()
+    
+    private let emptyStateImageView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(resource: .star))
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    
+    private let emptyStateLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Привычки и события можно\nобъединить по смыслу"
+        label.font = .systemFont(ofSize: 12, weight: .medium)
+        label.textColor = UIColor(resource: .appBlack)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
     
     // MARK: - Init
@@ -55,7 +73,8 @@ final class CategorySelectionViewController: UIViewController {
     }
     
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        assertionFailure("init(coder:) has not been implemented")
+        return nil
     }
     
     // MARK: - Lifecycle
@@ -64,18 +83,42 @@ final class CategorySelectionViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         navigationItem.title = "Категория"
+        setupEmptyState()
         setupDoneButton()
         setupTableView()
-        updateDoneButtonState()
+        updateUI()
     }
     
     // MARK: - Setup
+    
+    private func setupEmptyState() {
+        view.addSubview(emptyStateView)
+        emptyStateView.addSubview(emptyStateImageView)
+        emptyStateView.addSubview(emptyStateLabel)
+        
+        NSLayoutConstraint.activate([
+            emptyStateView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 16),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -16),
+            
+            emptyStateImageView.topAnchor.constraint(equalTo: emptyStateView.topAnchor),
+            emptyStateImageView.centerXAnchor.constraint(equalTo: emptyStateView.centerXAnchor),
+            emptyStateImageView.widthAnchor.constraint(equalToConstant: 80),
+            emptyStateImageView.heightAnchor.constraint(equalToConstant: 80),
+            
+            emptyStateLabel.topAnchor.constraint(equalTo: emptyStateImageView.bottomAnchor, constant: 8),
+            emptyStateLabel.leadingAnchor.constraint(equalTo: emptyStateView.leadingAnchor),
+            emptyStateLabel.trailingAnchor.constraint(equalTo: emptyStateView.trailingAnchor),
+            emptyStateLabel.bottomAnchor.constraint(equalTo: emptyStateView.bottomAnchor)
+        ])
+    }
     
     private func setupTableView() {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
-        tableView.backgroundColor = UIColor(named: "AppWhite")
+        tableView.backgroundColor = UIColor(resource: .appWhite)
         view.addSubview(tableView)
         
         NSLayoutConstraint.activate([
@@ -96,73 +139,65 @@ final class CategorySelectionViewController: UIViewController {
         ])
     }
     
-    private func updateDoneButtonState() {
-        let enabled = selectedCategory != nil
-        doneButton.isEnabled = enabled
-        doneButton.alpha = enabled ? 1.0 : 0.3
+    private func updateUI() {
+        let hasCategories = !categories.isEmpty
+        
+        // Показываем/скрываем заглушку
+        emptyStateView.isHidden = hasCategories
+        tableView.isHidden = !hasCategories
+        
+        // Кнопка "Добавить категорию" всегда активна
+        doneButton.setTitle("Добавить категорию", for: .normal)
+        doneButton.isEnabled = true
+        doneButton.alpha = 1.0
+        doneButton.backgroundColor = UIColor(resource: .appBlack)
     }
     
     // MARK: - Actions
     
     @objc private func doneTapped() {
-        guard let selectedCategory else { return }
-        notifyDelegateAndDismiss(with: selectedCategory)
+        // Кнопка "Добавить категорию" всегда открывает экран создания категории
+        presentNewCategoryViewController()
     }
     
-    private func presentAddCategoryAlert() {
-        let alert = UIAlertController(title: "Новая категория",
-                                      message: "Введите название категории",
-                                      preferredStyle: .alert)
-        alert.addTextField { textField in
-            textField.placeholder = "Например, Домашний уют"
-        }
-        
-        var textObserver: NSObjectProtocol?
-        
-        let addAction = UIAlertAction(title: "Добавить", style: .default) { [weak self] _ in
-            guard
-                let self = self,
-                let text = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines),
-                !text.isEmpty
-            else { return }
-            if let observer = textObserver {
-                NotificationCenter.default.removeObserver(observer)
-            }
-            
-            guard !self.categories.contains(where: { $0.caseInsensitiveCompare(text) == .orderedSame }) else {
-                self.selectedCategory = text
-                self.tableView.reloadSections(IndexSet(integer: Section.categories.rawValue), with: .automatic)
-                return
-            }
-            
-            self.categories.append(text)
-            self.selectedCategory = text
-            self.tableView.reloadSections(IndexSet(integer: Section.categories.rawValue), with: .automatic)
-        }
-        addAction.isEnabled = false
-        
-        let cancelAction = UIAlertAction(title: "Отмена", style: .cancel) { _ in
-            if let observer = textObserver {
-                NotificationCenter.default.removeObserver(observer)
-            }
-        }
-        
-        alert.addAction(addAction)
-        alert.addAction(cancelAction)
-        
-        present(alert, animated: true) {
-            textObserver = NotificationCenter.default.addObserver(forName: UITextField.textDidChangeNotification,
-                                                                  object: alert.textFields?.first,
-                                                                  queue: .main) { notification in
-                guard let field = notification.object as? UITextField else { return }
-                addAction.isEnabled = !(field.text?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
-            }
-        }
+    private func presentNewCategoryViewController() {
+        let newCategoryVC = NewCategoryViewController()
+        newCategoryVC.delegate = self
+        let navController = UINavigationController(rootViewController: newCategoryVC)
+        present(navController, animated: true)
     }
     
     private func notifyDelegateAndDismiss(with category: String) {
         delegate?.categorySelection(self, didSelect: category, categories: categories)
         dismiss(animated: true)
+    }
+    
+    private func addCategory(_ categoryName: String) {
+        let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        
+        // Проверяем, не существует ли уже такая категория
+        guard !categories.contains(where: { $0.caseInsensitiveCompare(trimmedName) == .orderedSame }) else {
+            // Если категория уже существует, просто выбираем её
+            selectedCategory = trimmedName
+            tableView.reloadSections(IndexSet(integer: 0), with: .automatic)
+            updateUI()
+            // Автоматически возвращаемся в настройки трекера
+            notifyDelegateAndDismiss(with: trimmedName)
+            return
+        }
+        
+        // Добавляем новую категорию
+        let wasEmpty = categories.isEmpty
+        categories.append(trimmedName)
+        selectedCategory = trimmedName
+        tableView.reloadSections(IndexSet(integer: 0), with: .automatic)
+        updateUI()
+        
+        // Если список был пуст, автоматически возвращаемся в настройки трекера
+        if wasEmpty {
+            notifyDelegateAndDismiss(with: trimmedName)
+        }
     }
 }
 
@@ -170,33 +205,18 @@ final class CategorySelectionViewController: UIViewController {
 
 extension CategorySelectionViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return Section.allCases.count
+        return 1
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        guard let sectionType = Section(rawValue: section) else { return 0 }
-        switch sectionType {
-        case .categories:
-            return categories.count
-        case .addCategory:
-            return 1
-        }
+        categories.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        guard let sectionType = Section(rawValue: indexPath.section) else { return cell }
-        
-        switch sectionType {
-        case .categories:
-            let category = categories[indexPath.row]
-            cell.textLabel?.text = category
-            cell.accessoryType = category == selectedCategory ? .checkmark : .none
-        case .addCategory:
-            cell.textLabel?.text = "Добавить категорию"
-            cell.textLabel?.textColor = UIColor(named: "AppBlack")
-            cell.accessoryType = .disclosureIndicator
-        }
+        let category = categories[indexPath.row]
+        cell.textLabel?.text = category
+        cell.accessoryType = category == selectedCategory ? .checkmark : .none
         cell.backgroundColor = tableBackgroundColor
         cell.contentView.backgroundColor = tableBackgroundColor
         cell.selectionStyle = .default
@@ -207,15 +227,25 @@ extension CategorySelectionViewController: UITableViewDataSource {
 // MARK: - UITableViewDelegate
 
 extension CategorySelectionViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 75
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard let sectionType = Section(rawValue: indexPath.section) else { return }
-        switch sectionType {
-        case .categories:
-            selectedCategory = categories[indexPath.row]
-            tableView.reloadSections(IndexSet(integer: Section.categories.rawValue), with: .automatic)
-        case .addCategory:
-            presentAddCategoryAlert()
-        }
+        let category = categories[indexPath.row]
+        selectedCategory = category
+        tableView.reloadSections(IndexSet(integer: 0), with: .automatic)
+        // Автоматически возвращаемся в настройки трекера при выборе категории
+        notifyDelegateAndDismiss(with: category)
+    }
+}
+
+// MARK: - NewCategoryViewControllerDelegate
+
+extension CategorySelectionViewController: NewCategoryViewControllerDelegate {
+    func newCategoryViewController(_ viewController: NewCategoryViewController,
+                                 didCreate category: String) {
+        addCategory(category)
     }
 }

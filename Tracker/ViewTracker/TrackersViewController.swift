@@ -82,6 +82,11 @@ class TrackersViewController: UIViewController{
     private let calendar = Calendar.current
     var currentDate: Date = Date()
     
+    // MARK: - Core Data Stores
+    private let trackerStore = TrackerStore()
+    private let categoryStore = TrackerCategoryStore()
+    private let recordStore = TrackerRecordStore()
+    
     private func configureNavigationBar() {
         title = "Трекеры"
         navigationItem.largeTitleDisplayMode = .always
@@ -99,14 +104,32 @@ class TrackersViewController: UIViewController{
         configureNavigationBar()
         setupLayout()
         searchBar.delegate = self
+        setupKeyboardDismiss()
 
         datePicker.addTarget(self, action: #selector(dateChanged), for: .valueChanged)
         
-        loadMockData()
+        setupStores()
         currentDate = normalized(date: Date())
         datePicker.date = currentDate
         applyFilters()
         
+    }
+    
+    private func setupStores() {
+        trackerStore.delegate = self
+        categoryStore.delegate = self
+        recordStore.delegate = self
+    }
+    
+    private func setupKeyboardDismiss() {
+        // Скрываем клавиатуру при тапе на view
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false
+        view.addGestureRecognizer(tapGesture)
+    }
+    
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
     }
     
     
@@ -138,6 +161,7 @@ class TrackersViewController: UIViewController{
         
         collectionView.dataSource = self
         collectionView.delegate = self
+        collectionView.keyboardDismissMode = .onDrag
         collectionView.register(TrackerCell.self, forCellWithReuseIdentifier: TrackerCell.identifier)
         collectionView.register(TrackersSectionHeader.self,
                                 forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
@@ -168,7 +192,8 @@ class TrackersViewController: UIViewController{
             return
         }
         
-        filteredCategories = categories.compactMap { category in
+        let allCategories = categoryStore.categories
+        filteredCategories = allCategories.compactMap { category in
             let trackers = category.trackers.filter { tracker in
                 let matchesSearch = normalizedSearch.isEmpty || tracker.title.lowercased().contains(normalizedSearch)
                 let matchesSchedule = tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
@@ -186,11 +211,7 @@ class TrackersViewController: UIViewController{
     @objc private func addTapped() {
         let vc = CreateTrackerTypeViewController()
         vc.creationDelegate = self
-        vc.availableCategories = categories.reduce(into: [String]()) { result, category in
-            if !result.contains(category.title) {
-                result.append(category.title)
-            }
-        }
+        vc.availableCategories = categoryStore.categories.map { $0.title }
         let nav = UINavigationController(rootViewController: vc)
         nav.modalPresentationStyle = .pageSheet
         present(nav, animated: true)
@@ -202,67 +223,40 @@ class TrackersViewController: UIViewController{
     }
     
     // MARK: - Data
-    var categories: [TrackerCategory] = []
-    var completedTrackers: [TrackerRecord] = []
-    private var completedTrackerSet: Set<TrackerRecord> = []
+    
+    var categories: [TrackerCategory] {
+        categoryStore.categories
+    }
 
     func complete(tracker: Tracker, on date: Date) {
         let normalizedDate = normalized(date: date)
-        let record = TrackerRecord(trackerId: tracker.id, date: normalizedDate)
-        guard !completedTrackerSet.contains(record) else { return }
-        completedTrackers.append(record)
-        completedTrackerSet.insert(record)
+        do {
+            try recordStore.addRecord(trackerId: tracker.id, date: normalizedDate)
+        } catch {
+            print("Failed to complete tracker: \(error)")
+        }
     }
 
     func uncomplete(tracker: Tracker, on date: Date) {
         let normalizedDate = normalized(date: date)
-        let record = TrackerRecord(trackerId: tracker.id, date: normalizedDate)
-        completedTrackers.removeAll {
-            $0.trackerId == tracker.id && calendar.isDate($0.date, inSameDayAs: normalizedDate)
+        do {
+            try recordStore.removeRecord(trackerId: tracker.id, date: normalizedDate)
+        } catch {
+            print("Failed to uncomplete tracker: \(error)")
         }
-        completedTrackerSet.remove(record)
     }
 
-    // Для теста 
-    func loadMockData() {
-        let plants = Tracker(
-            id: UUID(),
-            title: "Поливать растения",
-            colorHex: "#34C759",
-            emoji: "😪",
-            schedule: Weekday.allCases
-        )
-        let running = Tracker(
-            id: UUID(),
-            title: "Бег 3 км",
-            colorHex: "#FD4C49",
-            emoji: "🏃‍♂️",
-            schedule: [.monday, .wednesday, .friday]
-        )
-        let reading = Tracker(
-            id: UUID(),
-            title: "Чтение 30 мин",
-            colorHex: "#4ECDC4",
-            emoji: "📖",
-            schedule: [.tuesday, .thursday, .saturday]
-        )
-        let cozyCategory = TrackerCategory(title: "Домашний уют", trackers: [plants])
-        let healthCategory = TrackerCategory(title: "Здоровье", trackers: [running])
-        let hobbyCategory = TrackerCategory(title: "Саморазвитие", trackers: [reading])
-        categories = [cozyCategory, healthCategory, hobbyCategory]
-    }
     
     private func normalized(date: Date) -> Date {
         return calendar.startOfDay(for: date)
     }
 
     private func isTrackerCompleted(_ tracker: Tracker, on date: Date) -> Bool {
-        let record = TrackerRecord(trackerId: tracker.id, date: date)
-        return completedTrackerSet.contains(record)
+        return recordStore.isCompleted(trackerId: tracker.id, date: date)
     }
     
     private func completedCount(for tracker: Tracker) -> Int {
-        return completedTrackers.filter { $0.trackerId == tracker.id }.count
+        return recordStore.records.filter { $0.trackerId == tracker.id }.count
     }
     
     private func isFuture(date: Date) -> Bool {
@@ -403,16 +397,42 @@ extension TrackersViewController: UISearchBarDelegate {
 
 extension TrackersViewController: TrackerCreationDelegate {
     func trackerCreationDidCreate(_ tracker: Tracker, in categoryTitle: String) {
-        var updatedCategories = categories
-        if let index = updatedCategories.firstIndex(where: { $0.title == categoryTitle }) {
-            var trackers = updatedCategories[index].trackers
-            trackers.append(tracker)
-            let updatedCategory = TrackerCategory(title: categoryTitle, trackers: trackers)
-            updatedCategories[index] = updatedCategory
-        } else {
-            updatedCategories.append(TrackerCategory(title: categoryTitle, trackers: [tracker]))
+        do {
+            // Создаем категорию, если её нет
+            if !categoryStore.categories.contains(where: { $0.title == categoryTitle }) {
+                try categoryStore.createCategory(title: categoryTitle)
+            }
+            // Создаем трекер
+            try trackerStore.createTracker(tracker, in: categoryTitle)
+            applyFilters()
+        } catch {
+            print("Failed to create tracker: \(error)")
         }
-        categories = updatedCategories
-        applyFilters()
+    }
+}
+
+// MARK: - Store Delegates
+
+extension TrackersViewController: TrackerStoreDelegate {
+    func trackerStoreDidChange(_ store: TrackerStore) {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyFilters()
+        }
+    }
+}
+
+extension TrackersViewController: TrackerCategoryStoreDelegate {
+    func trackerCategoryStoreDidChange(_ store: TrackerCategoryStore) {
+        DispatchQueue.main.async { [weak self] in
+            self?.applyFilters()
+        }
+    }
+}
+
+extension TrackersViewController: TrackerRecordStoreDelegate {
+    func trackerRecordStoreDidChange(_ store: TrackerRecordStore) {
+        DispatchQueue.main.async { [weak self] in
+            self?.collectionView.reloadData()
+        }
     }
 }
