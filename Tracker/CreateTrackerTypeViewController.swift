@@ -13,7 +13,7 @@ final class CreateTrackerTypeViewController: UIViewController {
         label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.textColor = UIColor(named: "AppBlack")
+        label.textColor = UIColor(resource: .appBlack)
         return label
     }()
 
@@ -21,8 +21,8 @@ final class CreateTrackerTypeViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Привычка", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        button.setTitleColor(UIColor(named: "AppWhite"), for: .normal)
-        button.backgroundColor = (UIColor(named: "AppBlack"))
+        button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
+        button.backgroundColor = (UIColor(resource: .appBlack))
         button.layer.cornerRadius = 16
         button.addTarget(self, action: #selector(habitTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -33,8 +33,8 @@ final class CreateTrackerTypeViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Нерегулярное событие", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        button.setTitleColor(UIColor(named: "AppWhite"), for: .normal)
-        button.backgroundColor = (UIColor(named: "AppBlack"))
+        button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
+        button.backgroundColor = (UIColor(resource: .appBlack))
         button.layer.cornerRadius = 16
         button.addTarget(self, action: #selector(irregularTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false

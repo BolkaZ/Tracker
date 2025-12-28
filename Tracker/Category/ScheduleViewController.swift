@@ -13,14 +13,14 @@ final class ScheduleViewController: UIViewController {
     
     private var selectedWeekdays: Set<Weekday>
     
-    private let tableBackgroundColor = UIColor(named: "AppGrayOsn")
+    private let tableBackgroundColor = UIColor(resource: .appGrayOsn)
     
     private lazy var tableView: UITableView = {
         let table = UITableView(frame: .zero, style: .insetGrouped)
         table.translatesAutoresizingMaskIntoConstraints = false
         table.separatorStyle = .singleLine
         table.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        table.backgroundColor = UIColor(named: "AppWhite")
+        table.backgroundColor = UIColor(resource: .appWhite)
         table.tableHeaderView = UIView(frame: .zero)
         table.tableFooterView = UIView(frame: .zero)
         return table
@@ -31,7 +31,7 @@ final class ScheduleViewController: UIViewController {
         button.setTitle("Готово", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = UIColor(named: "AppBlack")
+        button.backgroundColor = UIColor(resource: .appBlack)
         button.layer.cornerRadius = 16
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
@@ -46,7 +46,8 @@ final class ScheduleViewController: UIViewController {
     }
     
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        assertionFailure("init(coder:) has not been implemented")
+        return nil
     }
     
     // MARK: - Lifecycle
@@ -123,9 +124,9 @@ extension ScheduleViewController: UITableViewDataSource {
         let toggle = UISwitch()
         toggle.isOn = selectedWeekdays.contains(weekday)
         toggle.tag = weekday.rawValue
-        toggle.onTintColor = UIColor(named: "AppBlue")
+        toggle.onTintColor = UIColor(resource: .appBlue)
         toggle.thumbTintColor = .white
-        toggle.backgroundColor = UIColor(named: "AppGrayOsn100")
+        toggle.backgroundColor = UIColor(resource: .appGrayOsn100)
         toggle.layer.cornerRadius = 16
         toggle.clipsToBounds = true
         toggle.addTarget(self, action: #selector(switchChanged(_:)), for: .valueChanged)
