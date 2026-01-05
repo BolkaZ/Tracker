@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		DBD1ED612EFFF5800026E245 /* Library.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = DBD1ED5F2EFFF5800026E245 /* Library.xcdatamodeld */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		DB974D042ED9EE6700F8D70B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -31,7 +27,6 @@
 		DB974CED2ED9EE6600F8D70B /* Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB974D032ED9EE6700F8D70B /* TrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB974D0D2ED9EE6700F8D70B /* TrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		DBD1ED602EFFF5800026E245 /* Library.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Library.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,7 +78,6 @@
 		DB974CE42ED9EE6600F8D70B = {
 			isa = PBXGroup;
 			children = (
-				DBD1ED5F2EFFF5800026E245 /* Library.xcdatamodeld */,
 				DB974CEF2ED9EE6600F8D70B /* Tracker */,
 				DB974CEE2ED9EE6600F8D70B /* Products */,
 			);
@@ -237,7 +231,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DBD1ED612EFFF5800026E245 /* Library.xcdatamodeld in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -580,19 +573,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCVersionGroup section */
-		DBD1ED5F2EFFF5800026E245 /* Library.xcdatamodeld */ = {
-			isa = XCVersionGroup;
-			children = (
-				DBD1ED602EFFF5800026E245 /* Library.xcdatamodel */,
-			);
-			currentVersion = DBD1ED602EFFF5800026E245 /* Library.xcdatamodel */;
-			path = Library.xcdatamodeld;
-			sourceTree = "<group>";
-			versionGroupType = wrapper.xcdatamodel;
-		};
-/* End XCVersionGroup section */
 	};
 	rootObject = DB974CE52ED9EE6600F8D70B /* Project object */;
 }
