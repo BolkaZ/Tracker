@@ -8,6 +8,10 @@ final class DataBaseStore {
     
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "Library")
+        if let description = container.persistentStoreDescriptions.first {
+            description.shouldMigrateStoreAutomatically = true
+            description.shouldInferMappingModelAutomatically = true
+        }
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 assertionFailure("Unresolved error \(error), \(error.userInfo)")
@@ -156,6 +160,7 @@ final class TrackerStore: CoreDataStore<TrackerEntity> {
             entity.type = Int16(tracker.schedule.isEmpty ? 1 : 0)
             entity.createdAt = Date()
             entity.updatedAt = Date()
+            entity.isPinned = tracker.isPinned
             entity.category = category
             
             for weekday in tracker.schedule {
@@ -176,6 +181,52 @@ final class TrackerStore: CoreDataStore<TrackerEntity> {
             context.delete(tracker)
             try saveContextIfNeeded()
         }
+    }
+    
+    func updatePinStatus(trackerId: UUID, isPinned: Bool) throws {
+        try context.performAndWait {
+            guard let tracker = try fetchTrackerEntity(id: trackerId) else {
+                throw TrackerStoreError.trackerNotFound
+            }
+            tracker.isPinned = isPinned
+            tracker.updatedAt = Date()
+            try saveContextIfNeeded()
+        }
+    }
+    
+    func updateTracker(_ tracker: Tracker, in categoryTitle: String) throws {
+        try context.performAndWait {
+            guard let entity = try fetchTrackerEntity(id: tracker.id) else {
+                throw TrackerStoreError.trackerNotFound
+            }
+            guard let category = try fetchCategoryEntity(title: categoryTitle) else {
+                throw TrackerStoreError.categoryNotFound
+            }
+            
+            entity.title = tracker.title
+            entity.emoji = tracker.emoji
+            entity.colorHex = tracker.colorHex
+            entity.type = Int16(tracker.schedule.isEmpty ? 1 : 0)
+            entity.updatedAt = Date()
+            entity.isPinned = tracker.isPinned
+            entity.category = category
+            
+            if let items = entity.scheduleItems as? Set<TrackerScheduleItemEntity> {
+                items.forEach { context.delete($0) }
+            }
+            
+            for weekday in tracker.schedule {
+                let item = TrackerScheduleItemEntity(context: context)
+                item.weekday = Int16(weekday.rawValue)
+                item.tracker = entity
+            }
+            
+            try saveContextIfNeeded()
+        }
+    }
+    
+    func categoryTitle(for trackerId: UUID) -> String? {
+        categoryFor(trackerId: trackerId)
     }
     
     private func fetchTrackerEntity(id: UUID) throws -> TrackerEntity? {
@@ -210,6 +261,7 @@ enum TrackerCategoryStoreError: Error {
     case duplicateTitle
     case categoryNotFound
     case invalidTitle
+    case categoryNotEmpty
 }
 
 final class TrackerCategoryStore: CoreDataStore<TrackerCategoryEntity> {
@@ -259,10 +311,35 @@ final class TrackerCategoryStore: CoreDataStore<TrackerCategoryEntity> {
         }
     }
     
+    func updateCategory(from oldTitle: String, to newTitle: String) throws {
+        let normalized = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else {
+            throw TrackerCategoryStoreError.invalidTitle
+        }
+        
+        try context.performAndWait {
+            guard let entity = try fetchCategoryEntity(title: oldTitle) else {
+                throw TrackerCategoryStoreError.categoryNotFound
+            }
+            
+            if oldTitle.caseInsensitiveCompare(normalized) != .orderedSame,
+               try fetchCategoryEntity(title: normalized) != nil {
+                throw TrackerCategoryStoreError.duplicateTitle
+            }
+            
+            entity.title = normalized
+            try saveContextIfNeeded()
+        }
+    }
+    
     func deleteCategory(title: String) throws {
         try context.performAndWait {
             guard let entity = try fetchCategoryEntity(title: title) else {
                 throw TrackerCategoryStoreError.categoryNotFound
+            }
+            let trackersCount = (entity.trackers as? Set<TrackerEntity>)?.count ?? 0
+            if trackersCount > 0 {
+                throw TrackerCategoryStoreError.categoryNotEmpty
             }
             context.delete(entity)
             try saveContextIfNeeded()
@@ -391,6 +468,7 @@ private extension TrackerEntity {
               let colorHex = colorHex else {
             return nil
         }
+        let isPinned = isPinned
         
         let items = (scheduleItems?.allObjects as? [TrackerScheduleItemEntity]) ?? []
         let weekdays = items.compactMap { (item: TrackerScheduleItemEntity) -> Weekday? in
@@ -403,7 +481,8 @@ private extension TrackerEntity {
             title: title,
             colorHex: colorHex,
             emoji: emoji,
-            schedule: weekdays
+            schedule: weekdays,
+            isPinned: isPinned
         )
     }
 }

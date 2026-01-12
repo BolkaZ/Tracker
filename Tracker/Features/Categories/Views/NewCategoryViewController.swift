@@ -34,7 +34,7 @@ final class NewCategoryViewController: UIViewController {
         textField.textColor = UIColor(resource: .appBlack)
         textField.backgroundColor = UIColor(resource: .appGrayOsn)
         textField.layer.cornerRadius = 16
-        textField.placeholder = "Введите название категории"
+        textField.placeholder = NSLocalizedString("Введите название категории", comment: "Category name placeholder")
         textField.delegate = self
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.addTarget(self, action: #selector(textFieldEditingChanged), for: .editingChanged)
@@ -46,7 +46,7 @@ final class NewCategoryViewController: UIViewController {
     
     private lazy var doneButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Готово", for: .normal)
+        button.setTitle(NSLocalizedString("Готово", comment: "Save new category"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
         button.setTitleColor(.white, for: .disabled)
@@ -63,7 +63,7 @@ final class NewCategoryViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(resource: .appWhite)
-        navigationItem.title = "Новая категория"
+        navigationItem.title = NSLocalizedString("Новая категория", comment: "New category title")
         bindViewModel()
         setupUI()
         setupKeyboardObservers()

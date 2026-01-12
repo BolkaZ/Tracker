@@ -19,7 +19,7 @@ final class CreateTrackerTypeViewController: UIViewController {
     
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Создание трекера"
+        label.text = NSLocalizedString("Создание трекера", comment: "Tracker type sheet title")
         label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -29,7 +29,7 @@ final class CreateTrackerTypeViewController: UIViewController {
 
     private lazy var habitButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Привычка", for: .normal)
+        button.setTitle(NSLocalizedString("Привычка", comment: "Create habit button"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
         button.backgroundColor = (UIColor(resource: .appBlack))
@@ -41,7 +41,7 @@ final class CreateTrackerTypeViewController: UIViewController {
 
     private lazy var irregularButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Нерегулярное событие", for: .normal)
+        button.setTitle(NSLocalizedString("Нерегулярное событие", comment: "Create irregular event button"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
         button.backgroundColor = (UIColor(resource: .appBlack))

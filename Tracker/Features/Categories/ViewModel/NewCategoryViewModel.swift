@@ -10,8 +10,8 @@ final class NewCategoryViewModel {
         }
     }
     
-    init() {
-        self.state = NewCategoryState(title: "")
+    init(initialTitle: String = "") {
+        self.state = NewCategoryState(title: initialTitle)
     }
     
     func bind() {

@@ -42,13 +42,16 @@ struct TrackerCreationState {
     var scheduleSummary: String? {
         guard type.requiresSchedule, isScheduleValid else { return nil }
         if schedule.count == Weekday.allCases.count {
-            return "Каждый день"
+            return NSLocalizedString("Каждый день", comment: "Every day schedule summary")
         }
         let sorted = schedule.sorted { $0.rawValue < $1.rawValue }
         return sorted.map { $0.shortTitle }.joined(separator: ", ")
     }
 
     var nameLimitText: String {
-        "Ограничение \(nameCharacterLimit) символов"
+        String(
+            format: NSLocalizedString("Ограничение %d символов", comment: "Name character limit format"),
+            nameCharacterLimit
+        )
     }
 }

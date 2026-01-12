@@ -11,6 +11,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         AppDelegate.shared = self
+        LoggingService.bootstrapIfNeeded()
+        AnalyticsService.activate()
         return true
     }
 
@@ -29,5 +31,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillTerminate(_ application: UIApplication) {
         DataBaseStore.shared.saveContextIfNeeded()
     }
+    
 }
 

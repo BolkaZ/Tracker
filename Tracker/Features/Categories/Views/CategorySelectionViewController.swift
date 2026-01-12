@@ -1,3 +1,10 @@
+//
+//  CategorySelectionViewController.swift
+//  Tracker
+//
+//  Created by Artem Kuzmenko on 19.11.2025.
+//
+
 import UIKit
 
 protocol CategorySelectionViewControllerDelegate: AnyObject {
@@ -39,7 +46,7 @@ final class CategorySelectionViewController: UIViewController {
     
     private lazy var doneButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Добавить категорию", for: .normal)
+        button.setTitle(NSLocalizedString("Добавить категорию", comment: "Add category button"), for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(UIColor(resource: .appWhite), for: .normal)
         button.backgroundColor = UIColor(resource: .appBlack)
@@ -65,7 +72,7 @@ final class CategorySelectionViewController: UIViewController {
     
     private let emptyStateLabel: UILabel = {
         let label = UILabel()
-        label.text = "Привычки и события можно\nобъединить по смыслу"
+        label.text = NSLocalizedString("Привычки и события можно\nобъединить по смыслу", comment: "Empty categories text")
         label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = UIColor(resource: .appBlack)
         label.textAlignment = .center
@@ -92,7 +99,7 @@ final class CategorySelectionViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(resource: .appWhite)
-        navigationItem.title = "Категория"
+        navigationItem.title = NSLocalizedString("Категория", comment: "Category selection title")
         setupEmptyState()
         setupDoneButton()
         setupTableView()
@@ -197,7 +204,7 @@ final class CategorySelectionViewController: UIViewController {
         tableView.isHidden = !hasCategories
         
         // Кнопка "Добавить категорию" всегда активна
-        doneButton.setTitle("Добавить категорию", for: .normal)
+        doneButton.setTitle(NSLocalizedString("Добавить категорию", comment: "Add category button"), for: .normal)
         doneButton.isEnabled = true
         doneButton.alpha = 1.0
         doneButton.backgroundColor = UIColor(resource: .appBlack)
@@ -221,9 +228,58 @@ final class CategorySelectionViewController: UIViewController {
         dismiss(animated: true)
     }
     
+    private func presentDeleteConfirmation(for category: String, at indexPath: IndexPath) {
+        let alert = UIAlertController(
+            title: nil,
+            message: NSLocalizedString("Эта категория точно не нужна?", comment: "Delete category confirmation"),
+            preferredStyle: .actionSheet
+        )
+        let deleteAction = UIAlertAction(
+            title: NSLocalizedString("Удалить", comment: "Delete category"),
+            style: .destructive
+        ) { [weak self] _ in
+            self?.viewModel.deleteCategory(title: category)
+        }
+        let cancelAction = UIAlertAction(
+            title: NSLocalizedString("Отмена", comment: "Cancel action"),
+            style: .cancel
+        )
+        
+        alert.addAction(deleteAction)
+        alert.addAction(cancelAction)
+        
+        if let popover = alert.popoverPresentationController,
+           let cell = tableView.cellForRow(at: indexPath) {
+            popover.sourceView = cell
+            popover.sourceRect = cell.bounds
+        } else if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(
+                x: view.bounds.midX,
+                y: view.bounds.midY,
+                width: 1,
+                height: 1
+            )
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    private func presentEditCategory(for category: String) {
+        let editVC = EditCategoryViewController(currentTitle: category)
+        editVC.delegate = self
+        let nav = UINavigationController(rootViewController: editVC)
+        nav.modalPresentationStyle = .pageSheet
+        present(nav, animated: true)
+    }
+    
     private func presentError(_ message: String) {
-        let alert = UIAlertController(title: "Ошибка", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        let alert = UIAlertController(
+            title: NSLocalizedString("Ошибка", comment: "Category error title"),
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK"), style: .default))
         present(alert, animated: true)
     }
     
@@ -270,6 +326,30 @@ extension CategorySelectionViewController: UITableViewDelegate {
         return 75
     }
     
+    func tableView(_ tableView: UITableView,
+                   contextMenuConfigurationForRowAt indexPath: IndexPath,
+                   point: CGPoint) -> UIContextMenuConfiguration? {
+        guard indexPath.row < state.categories.count else { return nil }
+        let category = state.categories[indexPath.row]
+        
+        return UIContextMenuConfiguration(identifier: indexPath as NSIndexPath, previewProvider: nil) { [weak self] _ in
+            let editAction = UIAction(
+                title: NSLocalizedString("Редактировать", comment: "Edit category action")
+            ) { [weak self] _ in
+                self?.presentEditCategory(for: category)
+            }
+            
+            let deleteAction = UIAction(
+                title: NSLocalizedString("Удалить", comment: "Delete category action"),
+                attributes: .destructive
+            ) { _ in
+                self?.presentDeleteConfirmation(for: category, at: indexPath)
+            }
+            
+            return UIMenu(children: [editAction, deleteAction])
+        }
+    }
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         viewModel.selectCategory(at: indexPath.row)
@@ -282,5 +362,15 @@ extension CategorySelectionViewController: NewCategoryViewControllerDelegate {
     func newCategoryViewController(_ viewController: NewCategoryViewController,
                                  didCreate category: String) {
         viewModel.createCategory(category)
+    }
+}
+
+// MARK: - EditCategoryViewControllerDelegate
+
+extension CategorySelectionViewController: EditCategoryViewControllerDelegate {
+    func editCategoryViewController(_ viewController: EditCategoryViewController,
+                                    didUpdateFrom oldTitle: String,
+                                    to newTitle: String) {
+        viewModel.updateCategory(oldTitle: oldTitle, newTitle: newTitle)
     }
 }
