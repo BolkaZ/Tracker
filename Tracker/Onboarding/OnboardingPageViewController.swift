@@ -8,11 +8,11 @@ final class OnboardingPageViewController: UIPageViewController {
     
     private let pages: [OnboardingPage] = [
         OnboardingPage(
-            title: "Отслеживайте только то, что хотите",
+            title: NSLocalizedString ("Отслеживайте только то, что хотите", comment: ""),
             imageName: "Onbord1"
         ),
         OnboardingPage(
-            title: "Даже если это не литры воды и йога",
+            title: NSLocalizedString( "Даже если это не литры воды и йога", comment: ""),
             imageName: "Onbord2"
         )
     ]
@@ -30,7 +30,7 @@ final class OnboardingPageViewController: UIPageViewController {
     private let skipButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Вот это технологии!", for: .normal)
+        button.setTitle(NSLocalizedString("Вот это технологии!", comment: "Finish onboarding button"), for: .normal)
         button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         button.setTitleColor(UIColor.white, for: .normal)
         button.backgroundColor = UIColor.black

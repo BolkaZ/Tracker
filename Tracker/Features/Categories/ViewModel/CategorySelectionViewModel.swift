@@ -64,6 +64,29 @@ final class CategorySelectionViewModel: NSObject {
         }
     }
     
+    func deleteCategory(at index: Int) {
+        guard index < state.categories.count else { return }
+        deleteCategory(title: state.categories[index])
+    }
+    
+    func deleteCategory(title: String) {
+        do {
+            try store.deleteCategory(title: title)
+            reloadCategories()
+        } catch {
+            handle(error: error)
+        }
+    }
+    
+    func updateCategory(oldTitle: String, newTitle: String) {
+        do {
+            try store.updateCategory(from: oldTitle, to: newTitle)
+            reloadCategories()
+        } catch {
+            handle(error: error)
+        }
+    }
+    
     private func reloadCategories() {
         let titles = store.categories.map { $0.title }
         let selected = state.selectedCategory.flatMap { selectedTitle in
@@ -92,14 +115,16 @@ final class CategorySelectionViewModel: NSObject {
         if let storeError = error as? TrackerCategoryStoreError {
             switch storeError {
             case .duplicateTitle:
-                message = "Такая категория уже существует."
+                message = NSLocalizedString("Такая категория уже существует.", comment: "Category duplicate error")
             case .invalidTitle:
-                message = "Введите корректное название категории."
+                message = NSLocalizedString("Введите корректное название категории.", comment: "Category invalid title error")
             case .categoryNotFound:
-                message = "Категория не найдена."
+                message = NSLocalizedString("Категория не найдена.", comment: "Category not found error")
+            case .categoryNotEmpty:
+                message = NSLocalizedString("Сначала перенесите трекеры из этой категории.", comment: "Category not empty error")
             }
         } else {
-            message = "Не удалось сохранить категорию. Попробуйте ещё раз."
+            message = NSLocalizedString("Не удалось сохранить категорию. Попробуйте ещё раз.", comment: "Category generic save error")
         }
         DispatchQueue.main.async {
             self.onError?(message)

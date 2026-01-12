@@ -8,6 +8,21 @@ struct Tracker {
     let colorHex: String
     let emoji: String
     let schedule: [Weekday]
+    let isPinned: Bool
+    
+    init(id: UUID,
+         title: String,
+         colorHex: String,
+         emoji: String,
+         schedule: [Weekday],
+         isPinned: Bool = false) {
+        self.id = id
+        self.title = title
+        self.colorHex = colorHex
+        self.emoji = emoji
+        self.schedule = schedule
+        self.isPinned = isPinned
+    }
 }
 
 // MARK: - Weekday
@@ -22,28 +37,50 @@ enum Weekday: Int, CaseIterable, Codable {
     case sunday
 }
 
+enum Localizable {
+    enum Weekday {
+        static let monday = NSLocalizedString("Понедельник", comment: "Weekday Monday")
+        static let tuesday = NSLocalizedString("Вторник", comment: "Weekday Tuesday")
+        static let wednesday = NSLocalizedString("Среда", comment: "Weekday Wednesday")
+        static let thursday = NSLocalizedString("Четверг", comment: "Weekday Thursday")
+        static let friday = NSLocalizedString("Пятница", comment: "Weekday Friday")
+        static let saturday = NSLocalizedString("Суббота", comment: "Weekday Saturday")
+        static let sunday = NSLocalizedString("Воскресенье", comment: "Weekday Sunday")
+    }
+    
+    enum WeekdayShort {
+        static let monday = NSLocalizedString("Пн", comment: "Weekday short Monday")
+        static let tuesday = NSLocalizedString("Вт", comment: "Weekday short Tuesday")
+        static let wednesday = NSLocalizedString("Ср", comment: "Weekday short Wednesday")
+        static let thursday = NSLocalizedString("Чт", comment: "Weekday short Thursday")
+        static let friday = NSLocalizedString("Пт", comment: "Weekday short Friday")
+        static let saturday = NSLocalizedString("Сб", comment: "Weekday short Saturday")
+        static let sunday = NSLocalizedString("Вс", comment: "Weekday short Sunday")
+    }
+}
+
 extension Weekday {
     var localizedName: String {
         switch self {
-        case .monday: return "Понедельник"
-        case .tuesday: return "Вторник"
-        case .wednesday: return "Среда"
-        case .thursday: return "Четверг"
-        case .friday: return "Пятница"
-        case .saturday: return "Суббота"
-        case .sunday: return "Воскресенье"
+        case .monday: Localizable.Weekday.monday
+        case .tuesday: Localizable.Weekday.tuesday
+        case .wednesday: Localizable.Weekday.wednesday
+        case .thursday: Localizable.Weekday.thursday
+        case .friday: Localizable.Weekday.friday
+        case .saturday: Localizable.Weekday.saturday
+        case .sunday: Localizable.Weekday.sunday
         }
     }
     
     var shortTitle: String {
         switch self {
-        case .monday: return "Пн"
-        case .tuesday: return "Вт"
-        case .wednesday: return "Ср"
-        case .thursday: return "Чт"
-        case .friday: return "Пт"
-        case .saturday: return "Сб"
-        case .sunday: return "Вс"
+        case .monday: Localizable.WeekdayShort.monday
+        case .tuesday: Localizable.WeekdayShort.tuesday
+        case .wednesday: Localizable.WeekdayShort.wednesday
+        case .thursday: Localizable.WeekdayShort.thursday
+        case .friday: Localizable.WeekdayShort.friday
+        case .saturday: Localizable.WeekdayShort.saturday
+        case .sunday: Localizable.WeekdayShort.sunday
         }
     }
     

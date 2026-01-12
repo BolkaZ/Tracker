@@ -4,6 +4,7 @@ final class TrackerCreationViewModel {
     
     var onStateChange: ((TrackerCreationState) -> Void)?
     private let nameCharacterLimit = 38
+    private let editingTracker: Tracker?
     
     private(set) var state: TrackerCreationState {
         didSet {
@@ -11,13 +12,17 @@ final class TrackerCreationViewModel {
         }
     }
     
-    init(type: TrackerCreationType, availableCategories: [String] = []) {
+    init(type: TrackerCreationType,
+         availableCategories: [String] = [],
+         editingTracker: Tracker? = nil,
+         categoryTitle: String? = nil) {
+        self.editingTracker = editingTracker
         self.state = TrackerCreationState(type: type,
-                                          name: "",
-                                          category: nil,
-                                          emoji: nil,
-                                          colorHex: nil,
-                                          schedule: [],
+                                          name: editingTracker?.title ?? "",
+                                          category: categoryTitle,
+                                          emoji: editingTracker?.emoji,
+                                          colorHex: editingTracker?.colorHex,
+                                          schedule: editingTracker?.schedule ?? [],
                                           availableCategories: availableCategories,
                                           nameCharacterLimit: nameCharacterLimit)
     }
@@ -71,11 +76,14 @@ final class TrackerCreationViewModel {
             return nil
         }
         
-        let tracker = Tracker(id: UUID(),
+        let trackerId = editingTracker?.id ?? UUID()
+        let isPinned = editingTracker?.isPinned ?? false
+        let tracker = Tracker(id: trackerId,
                               title: state.trimmedName,
                               colorHex: colorHex,
                               emoji: emoji,
-                              schedule: state.schedule)
+                              schedule: state.schedule,
+                              isPinned: isPinned)
         return (tracker, category)
     }
 }

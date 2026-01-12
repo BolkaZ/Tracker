@@ -1,6 +1,6 @@
 import UIKit
 
-final class CreateIrregularViewController: BaseTrackerCreationViewController {
+class CreateIrregularViewController: BaseTrackerCreationViewController {
     
     // MARK: - Init
     
@@ -17,7 +17,7 @@ final class CreateIrregularViewController: BaseTrackerCreationViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        titleLabel.text = "Новое нерегулярное событие"
+        titleLabel.text = NSLocalizedString("Новое нерегулярное событие", comment: "Create irregular event title")
     }
     
     // MARK: - Override Methods

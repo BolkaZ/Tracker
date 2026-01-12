@@ -10,13 +10,13 @@ class MainTabBarController: UITabBarController {
         let staticksVC = StatsViewController()
 
         // Настройка Tab Bar Item с кастомными картинками
-        trackersVC.tabBarItem = UITabBarItem(title: "Трекеры",
-                                             image: UIImage(named: "TabTrack"),
-                                             selectedImage: UIImage(named: "TabTrack"))
+        trackersVC.tabBarItem = UITabBarItem(title: NSLocalizedString("Трекеры", comment: "Tab title trackers"),
+                                             image: UIImage(resource: .tabTrack),
+                                             selectedImage: UIImage(resource: .tabTrack))
         
-        staticksVC.tabBarItem = UITabBarItem(title: "Статистика",
-                                          image: UIImage(named: "TabStat"),
-                                          selectedImage: UIImage(named: "TabStat"))
+        staticksVC.tabBarItem = UITabBarItem(title: NSLocalizedString("Статистика", comment: "Tab title stats"),
+                                             image: UIImage(resource: .tabStat),
+                                             selectedImage: UIImage(resource: .tabStat))
 
         viewControllers = [
             UINavigationController(rootViewController: trackersVC),
@@ -32,15 +32,15 @@ class MainTabBarController: UITabBarController {
         appearance.backgroundColor = UIColor(resource: .appWhite)
 
         // Линия
-        appearance.shadowColor = UIColor(named: "AppGray")
+        appearance.shadowColor = UIColor(resource: .appGray)
 
         // Неактивное состояние
-        let unselectedColor = UIColor(named: "AppGray") ?? UIColor.gray
+        let unselectedColor = UIColor(resource: .appGray)
         appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
 
         // Активное состояние
-        let selectedColor = UIColor(named: "AppBlue") ?? UIColor.systemBlue
+        let selectedColor = UIColor(resource: .appBlue)
         appearance.stackedLayoutAppearance.selected.iconColor = selectedColor
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: selectedColor]
 

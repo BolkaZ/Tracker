@@ -1,10 +1,30 @@
 import UIKit
 
-final class CreateHabitViewController: BaseTrackerCreationViewController {
+class CreateHabitViewController: BaseTrackerCreationViewController {
+    
+    // MARK: - UI
+    
+    private let daysCounterLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 32, weight: .bold)
+        label.textColor = UIColor(resource: .appBlack)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    // MARK: - Properties
+    
+    private let showDaysCounter: Bool
+    private let daysCount: Int?
     
     // MARK: - Init
     
-    override init(viewModel: TrackerCreationViewModel = TrackerCreationViewModel(type: .habit)) {
+    init(viewModel: TrackerCreationViewModel = TrackerCreationViewModel(type: .habit),
+         showDaysCounter: Bool = false,
+         daysCount: Int? = nil) {
+        self.showDaysCounter = showDaysCounter
+        self.daysCount = daysCount
         super.init(viewModel: viewModel)
     }
     
@@ -16,7 +36,10 @@ final class CreateHabitViewController: BaseTrackerCreationViewController {
     // MARK: - UI Elements
     
     private lazy var scheduleButton: UIButton = {
-        let button = createSelectionButton(title: "Расписание", subtitle: nil)
+        let button = createSelectionButton(
+            title: NSLocalizedString("Расписание", comment: "Schedule selection button"),
+            subtitle: nil
+        )
         button.addTarget(self, action: #selector(scheduleTapped), for: .touchUpInside)
         button.backgroundColor = UIColor(resource: .appGrayOsn)
         button.layer.cornerRadius = 16
@@ -35,18 +58,33 @@ final class CreateHabitViewController: BaseTrackerCreationViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        titleLabel.text = "Новая привычка"
+        titleLabel.text = NSLocalizedString("Новая привычка", comment: "Create habit title")
         categoryButton.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         updateScheduleSubtitle(with: viewModel.state.schedule)
+        if showDaysCounter {
+            updateDaysCounterLabel()
+        }
     }
     
     // MARK: - Override Methods
     
     override func setupSpecificUI() {
+        if showDaysCounter {
+            contentView.addSubview(daysCounterLabel)
+        }
         contentView.addSubview(scheduleButton)
         contentView.addSubview(separatorView)
         
-        NSLayoutConstraint.activate([
+        var constraints: [NSLayoutConstraint] = []
+        if showDaysCounter {
+            constraints.append(contentsOf: [
+                daysCounterLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 24),
+                daysCounterLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+                daysCounterLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+            ])
+        }
+        
+        constraints.append(contentsOf: [
             separatorView.centerYAnchor.constraint(equalTo: categoryButton.bottomAnchor),
             separatorView.leadingAnchor.constraint(equalTo: categoryButton.leadingAnchor, constant: 16),
             separatorView.trailingAnchor.constraint(equalTo: categoryButton.trailingAnchor, constant: -16),
@@ -57,10 +95,22 @@ final class CreateHabitViewController: BaseTrackerCreationViewController {
             scheduleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             scheduleButton.heightAnchor.constraint(equalToConstant: 75)
         ])
+        
+        NSLayoutConstraint.activate(constraints)
     }
     
     override func getElementAboveEmojiTitle() -> UIView {
         return scheduleButton
+    }
+    
+    override func nameTopAnchorView() -> UIView {
+        guard showDaysCounter else { return super.nameTopAnchorView() }
+        return daysCounterLabel
+    }
+    
+    override func getNameTopSpacing() -> CGFloat {
+        guard showDaysCounter else { return super.getNameTopSpacing() }
+        return 40
     }
     
     // MARK: - Actions
@@ -81,7 +131,7 @@ final class CreateHabitViewController: BaseTrackerCreationViewController {
             return
         }
         if schedule.count == Weekday.allCases.count {
-            updateButton(scheduleButton, subtitle: "Каждый день")
+            updateButton(scheduleButton, subtitle: NSLocalizedString("Каждый день", comment: "Every day schedule summary"))
         } else {
             let text = schedule
                 .sorted { $0.rawValue < $1.rawValue }
@@ -96,6 +146,32 @@ final class CreateHabitViewController: BaseTrackerCreationViewController {
         if previous?.schedule != current.schedule {
             updateScheduleSubtitle(with: current.schedule)
         }
+    }
+    
+    // MARK: - Days counter
+    
+    private func updateDaysCounterLabel() {
+        guard let count = daysCount else { return }
+        daysCounterLabel.text = formattedDaysText(for: count)
+    }
+    
+    private func formattedDaysText(for count: Int) -> String {
+        let remainder10 = count % 10
+        let remainder100 = count % 100
+        let suffix: String
+        if remainder100 >= 11 && remainder100 <= 14 {
+            suffix = NSLocalizedString("дней", comment: "Days plural genitive")
+        } else {
+            switch remainder10 {
+            case 1:
+                suffix = NSLocalizedString("день", comment: "Day singular")
+            case 2...4:
+                suffix = NSLocalizedString("дня", comment: "Days plural")
+            default:
+                suffix = NSLocalizedString("дней", comment: "Days plural genitive")
+            }
+        }
+        return "\(count) \(suffix)"
     }
 }
 

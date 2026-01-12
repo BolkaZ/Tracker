@@ -8,7 +8,7 @@ final class StatsViewController: UIViewController {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Статистика"
+        label.text = NSLocalizedString("Статистика", comment: "Statistics screen title")
         label.font = UIFont.systemFont(ofSize: 34, weight: .bold)
         label.textColor = UIColor(resource: .appBlack)
         return label
@@ -31,7 +31,7 @@ final class StatsViewController: UIViewController {
     
     private let emptyLabel: UILabel = {
         let label = UILabel()
-        label.text = "Анализировать пока нечего"
+        label.text = NSLocalizedString("Анализировать пока нечего", comment: "Empty stats placeholder")
         label.font = UIFont.systemFont(ofSize: 12, weight: .medium)
         label.textColor = UIColor(resource: .appBlack)
         label.textAlignment = .center

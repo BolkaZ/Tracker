@@ -1,3 +1,11 @@
+//
+//  AppDateFormatter.swift
+//  Tracker
+//
+//  Created by Artem Kuzmenko on 15.11.2025.
+//
+
+
 import Foundation
 
 struct AppDateFormatter {

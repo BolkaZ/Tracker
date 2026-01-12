@@ -1,8 +1,21 @@
 import Foundation
 
 struct TrackersViewState {
+    enum EmptyReason {
+        case none
+        case noTrackersForDate
+        case noResults
+    }
+    
     let sections: [TrackersViewModel.Section]
     let hasTrackers: Bool
+    let hasAnyTrackersForDate: Bool
+    let filter: TrackersFilter
+    let emptyReason: EmptyReason
+    
+    var isFilterActive: Bool {
+        filter.isActive
+    }
 }
 
 final class TrackersViewModel: NSObject {
@@ -30,6 +43,7 @@ final class TrackersViewModel: NSObject {
     
     private var searchQuery: String = ""
     private(set) var currentDate: Date
+    private(set) var selectedFilter: TrackersFilter = .all
     
     private(set) var state: TrackersViewState {
         didSet {
@@ -46,7 +60,13 @@ final class TrackersViewModel: NSObject {
         self.recordStore = recordStore
         self.calendar = calendar
         self.currentDate = calendar.startOfDay(for: Date())
-        self.state = TrackersViewState(sections: [], hasTrackers: false)
+        self.state = TrackersViewState(
+            sections: [],
+            hasTrackers: false,
+            hasAnyTrackersForDate: false,
+            filter: .all,
+            emptyReason: .noTrackersForDate
+        )
         super.init()
         self.trackerStore.delegate = self
         self.categoryStore.delegate = self
@@ -65,6 +85,14 @@ final class TrackersViewModel: NSObject {
     
     func updateDate(_ date: Date) {
         currentDate = normalized(date: date)
+        applyFilters()
+    }
+    
+    func selectFilter(_ filter: TrackersFilter) {
+        selectedFilter = filter
+        if filter == .today {
+            currentDate = normalized(date: Date())
+        }
         applyFilters()
     }
     
@@ -121,6 +149,10 @@ final class TrackersViewModel: NSObject {
         categoryStore.categories.map { $0.title }
     }
     
+    func categoryTitle(for tracker: Tracker) -> String? {
+        trackerStore.categoryTitle(for: tracker.id)
+    }
+    
     func createTracker(_ tracker: Tracker, in categoryTitle: String) {
         do {
             if categoryStore.categories.contains(where: { $0.title.caseInsensitiveCompare(categoryTitle) == .orderedSame }) == false {
@@ -133,34 +165,122 @@ final class TrackersViewModel: NSObject {
         }
     }
     
+    func updateTracker(_ tracker: Tracker, in categoryTitle: String) {
+        do {
+            if categoryStore.categories.contains(where: { $0.title.caseInsensitiveCompare(categoryTitle) == .orderedSame }) == false {
+                try categoryStore.createCategory(title: categoryTitle)
+            }
+            try trackerStore.updateTracker(tracker, in: categoryTitle)
+            applyFilters()
+        } catch {
+            assertionFailure("Failed to update tracker: \(error)")
+        }
+    }
+    
+    func togglePin(for tracker: Tracker) {
+        do {
+            try trackerStore.updatePinStatus(trackerId: tracker.id, isPinned: tracker.isPinned == false)
+        } catch {
+            assertionFailure("Failed to update pin status: \(error)")
+        }
+    }
+    
+    func deleteTracker(_ tracker: Tracker) {
+        do {
+            try trackerStore.deleteTracker(with: tracker.id)
+        } catch {
+            assertionFailure("Failed to delete tracker: \(error)")
+        }
+    }
+    
     private func applyFilters() {
         guard let weekday = Weekday.from(date: currentDate, calendar: calendar) else {
-            state = TrackersViewState(sections: [], hasTrackers: false)
+            state = TrackersViewState(
+                sections: [],
+                hasTrackers: false,
+                hasAnyTrackersForDate: false,
+                filter: selectedFilter,
+                emptyReason: .noTrackersForDate
+            )
             return
         }
         
+        let normalizedDate = normalized(date: currentDate)
         let normalizedSearch = searchQuery.lowercased()
         let categories = categoryStore.categories
         
-        let sections = categories.compactMap { category -> Section? in
-            let trackers = category.trackers.filter { tracker in
-                let matchesSearch = normalizedSearch.isEmpty
-                || tracker.title.lowercased().contains(normalizedSearch)
-                let matchesSchedule = tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
-                return matchesSearch && matchesSchedule
+        let matchesTracker: (Tracker) -> Bool = { tracker in
+            let matchesSearch = normalizedSearch.isEmpty
+            || tracker.title.lowercased().contains(normalizedSearch)
+            let matchesSchedule = tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
+            
+            guard matchesSearch && matchesSchedule else { return false }
+            
+            switch self.selectedFilter {
+            case .all, .today:
+                return true
+            case .completed:
+                return self.recordStore.isCompleted(trackerId: tracker.id, date: normalizedDate)
+            case .uncompleted:
+                return self.recordStore.isCompleted(trackerId: tracker.id, date: normalizedDate) == false
             }
-            guard trackers.isEmpty == false else { return nil }
-            return Section(title: category.title, trackers: trackers)
         }
         
-        state = TrackersViewState(sections: sections, hasTrackers: sections.flatMap { $0.trackers }.isEmpty == false)
+        let hasAnyTrackersForDate = categories.contains { category in
+            category.trackers.contains { tracker in
+                tracker.schedule.isEmpty || tracker.schedule.contains(weekday)
+            }
+        }
+        
+        let pinnedTrackers = categories
+            .flatMap { $0.trackers }
+            .filter { $0.isPinned && matchesTracker($0) }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        let pinnedSection: Section? = pinnedTrackers.isEmpty
+        ? nil
+        : Section(title: NSLocalizedString("Закрепленные", comment: "Pinned trackers category title"),
+                  trackers: pinnedTrackers)
+        
+        let regularSections = categories.compactMap { category -> Section? in
+            let trackers = category.trackers.filter { tracker in
+                matchesTracker(tracker) && tracker.isPinned == false
+            }
+            guard trackers.isEmpty == false else { return nil }
+            let sortedTrackers = trackers.sorted {
+                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+            return Section(title: category.title, trackers: sortedTrackers)
+        }
+        .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        
+        var assembledSections: [Section] = []
+        if let pinnedSection {
+            assembledSections.append(pinnedSection)
+        }
+        assembledSections.append(contentsOf: regularSections)
+        
+        let hasTrackers = assembledSections.flatMap { $0.trackers }.isEmpty == false
+        let emptyReason: TrackersViewState.EmptyReason
+        if hasTrackers {
+            emptyReason = .none
+        } else {
+            emptyReason = hasAnyTrackersForDate ? .noResults : .noTrackersForDate
+        }
+        
+        state = TrackersViewState(
+            sections: assembledSections,
+            hasTrackers: hasTrackers,
+            hasAnyTrackersForDate: hasAnyTrackersForDate,
+            filter: selectedFilter,
+            emptyReason: emptyReason
+        )
     }
     
     private func normalized(date: Date) -> Date {
         calendar.startOfDay(for: date)
     }
     
-    private func completedCount(for tracker: Tracker) -> Int {
+    func completedCount(for tracker: Tracker) -> Int {
         recordStore.records.filter { $0.trackerId == tracker.id }.count
     }
     
@@ -169,15 +289,15 @@ final class TrackersViewModel: NSObject {
         let remainder100 = count % 100
         let suffix: String
         if remainder100 >= 11 && remainder100 <= 14 {
-            suffix = "дней"
+            suffix = NSLocalizedString("дней", comment: "Days plural genitive")
         } else {
             switch remainder10 {
             case 1:
-                suffix = "день"
+                suffix = NSLocalizedString("день", comment: "Day singular")
             case 2...4:
-                suffix = "дня"
+                suffix = NSLocalizedString("дня", comment: "Days plural")
             default:
-                suffix = "дней"
+                suffix = NSLocalizedString("дней", comment: "Days plural genitive")
             }
         }
         return "\(count) \(suffix)"
@@ -205,6 +325,7 @@ extension TrackersViewModel: TrackerCategoryStoreDelegate {
 
 extension TrackersViewModel: TrackerRecordStoreDelegate {
     func trackerRecordStoreDidChange(_ store: TrackerRecordStore) {
+        applyFilters()
         onRecordsUpdated?()
     }
 }
